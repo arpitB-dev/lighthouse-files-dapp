@@ -1,70 +1,54 @@
 import { ethers } from "ethers";
-import { notify } from "./notification";
-
+import {
+  tokenCost,
+  receiverAddress,
+  contractAddress,
+} from "../config/tokenTransferData";
+import { getChainNetwork } from "./chainNetwork";
+import { usdtABI } from "../contract_abi/usdcABi";
 const provider = new ethers.providers.Web3Provider(window.ethereum, "any");
 
-const usdc = {
-  address: "0x68ec573C119826db2eaEA1Efbfc2970cDaC869c4",
-  abi: [
-    "function name() view returns (string)",
-    "function symbol() view returns (string)",
-    "function gimmeSome() external",
-    "function balanceOf(address _owner) public view returns (uint256 balance)",
-    "function transfer(address _to, uint256 _value) public returns (bool success)",
-  ],
-};
-
-export async function transferUsdc() {
-  console.log("inside");
-  let receiver = "0x68ec573C119826db2eaEA1Efbfc2970cDaC869c4";
-  let amount = "1";
-  let response;
-
-  await provider.send("eth_requestAccounts", []);
+export async function SendTransaction() {
+  const send_abi = usdtABI;
+  console.log(send_abi);
+  const provider = new ethers.providers.Web3Provider(window.ethereum);
   const signer = provider.getSigner();
-  let userAddress = await signer.getAddress();
-
-  const usdcContract = new ethers.Contract(usdc.address, usdc.abi, signer);
-
+  let chainInfo = await getContractInfo();
+  const contract = new ethers.Contract(
+    chainInfo["contractAddress"],
+    send_abi,
+    signer
+  );
+  const numberOfTokens = ethers.utils.parseUnits(
+    tokenCost,
+    chainInfo["decimal"]
+  );
   try {
-    receiver = ethers.utils.getAddress(receiver);
-  } catch {
-    response = `Invalid address: ${receiver}`;
-    notify(response, "error");
+    const txResponse = await contract.transfer(receiverAddress, numberOfTokens);
+    const txReceipt = await txResponse.wait();
+    console.log(txReceipt);
+  } catch (error) {
+    console.error(error.code);
   }
+}
 
-  try {
-    amount = ethers.utils.parseUnits(amount, 6);
-    if (amount.isNegative()) {
-      throw new Error();
-    }
-  } catch {
-    response = `Invalid amount: ${amount}`;
-    notify(response, "error");
-  }
+async function getContractInfo() {
+  let currentChain = await getChainNetwork();
+  let contractObj = contractAddress.filter(
+    (chain) => chain.chain === currentChain
+  );
+  return contractObj[0];
+}
 
-  //   const balance = await usdcContract.balanceOf(userAddress);
+async function getCurrentBlock() {
+  let currentBlock = await provider.getBlockNumber();
+  console.log(currentBlock);
+  return currentBlock;
+}
 
-  //   if (balance.lt(amount)) {
-  //     let amountFormatted = ethers.utils.formatUnits(amount, 6);
-  //     let balanceFormatted = ethers.utils.formatUnits(balance, 6);
-  //     console.error(
-  //       `Insufficient balance receiver send ${amountFormatted} (You have ${balanceFormatted})`
-  //     );
-
-  //     response = `Insufficient balance receiver send ${amountFormatted} (You have ${balanceFormatted})`;
-  //     notify(response, "error");
-  //   }
-  let amountFormatted = ethers.utils.formatUnits(amount, 6);
-
-  response = `Transferring ${amountFormatted} USDC receiver ${receiver.slice(
-    0,
-    6
-  )}...`;
-  notify(response, "success");
-
-  const tx = await usdcContract.transfer(receiver, amount, { gasPrice: 20e9 });
-  const receipt = await tx.wait();
-  response = `Transaction confirmed in block ${receipt.blockNumber}`;
-  notify(response, "success");
+async function getBalance(wallet) {
+  let balance = await provider.getBalance(wallet);
+  // we use the code below to convert the balance from wei to eth
+  balance = ethers.utils.formatEther(balance);
+  console.log(balance);
 }
