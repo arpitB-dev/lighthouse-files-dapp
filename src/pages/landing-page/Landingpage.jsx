@@ -10,6 +10,9 @@ import { ethers } from "ethers";
 import { notify } from "../../utils/services/notification";
 import { login } from "../../utils/services/auth";
 import { baseUrl } from "../../utils/config/urls";
+import { OpenloginAdapter } from "@web3auth/openlogin-adapter";
+
+
 
 
 function isMobileDevice() {
@@ -41,6 +44,19 @@ const sign_message = async (setUserAddress, _navigate) => {
         return;
     }
 }
+
+const openloginAdapter = await OpenloginAdapter({
+    adapterSettings: {
+        network: "testnet",
+        clientId: "example-client-id",
+        uxMode: "popup",
+    },
+    loginSettings: {
+        relogin: true,
+    },
+});
+
+//   web3auth.configureAdapter(openloginAdapter);
 
 
 
@@ -106,10 +122,10 @@ function Landingpage() {
                         <img src="/icons/metamask.png" alt="metamaskIcon" />
                         <p className="m-1">Metamask</p>
                     </div>
-                    {/* <div className="loginBox ptr" onClick={goToDashboard}>
+                    <div className="loginBox ptr" onClick={() => { }}>
                     <img src="/icons/walletConnect.png" alt="walletConnect" />
                     <p>Wallet Connect</p>
-                </div> */}
+                    </div>
                 </div>
             </div>
         </div>
